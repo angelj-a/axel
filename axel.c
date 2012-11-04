@@ -218,13 +218,17 @@ int axel_open( axel_t *axel )
 void axel_start( axel_t *axel )
 {
 	int i;
+	url_t* next_u = axel->url->next;
+	url_t* current_u = axel->url; 
 	
 	/* HTTP might've redirected and FTP handles wildcards, so
 	   re-scan the URL for every conn				*/
 	for( i = 0; i < axel->conf->num_connections; i ++ )
 	{
-		conn_set( &axel->conn[i], axel->url->text );
-		axel->url = axel->url->next;
+		conn_set( &axel->conn[i], current_u->text );
+		current_u = next_u;
+		next_u = next_u->next;
+		
 		axel->conn[i].local_if = axel->conf->interfaces->text;
 		axel->conf->interfaces = axel->conf->interfaces->next;
 		axel->conn[i].conf = axel->conf;
@@ -455,7 +459,10 @@ void axel_close( axel_t *axel )
 	for( i = 0; i < axel->conf->num_connections; i ++ )
 		/* don't try to kill non existing thread */
 		if ( *axel->conn[i].setup_thread != 0 )
+		{
 			pthread_cancel( *axel->conn[i].setup_thread );
+			pthread_detach( *axel->conn[i].setup_thread );
+		}
 	
 	/* Delete state file if necessary				*/
 	if( axel->ready == 1 )
@@ -482,8 +489,8 @@ void axel_close( axel_t *axel )
 	for( i = 0; i < axel->conf->num_connections; i ++ )
 		conn_disconnect( &axel->conn[i] );
 
-	free( axel->conn );
-	free( axel );
+	free_axel_t( axel );
+	free( buffer );
 }
 
 /* time() with more precision						*/
@@ -589,4 +596,33 @@ static void axel_divide( axel_t *axel )
 #ifdef DEBUG
 	printf( "Downloading %lld-%lld using conn. %i\n", axel->conn[i-1].currentbyte, axel->conn[i-1].lastbyte, i - 1 );
 #endif
+}
+
+
+
+void free_axel_t ( axel_t *axel )
+{
+	url_t *current_u = axel->url;
+	url_t *n_u = axel->url->next;
+	
+	while (  current_u != axel->url ) {
+		free( current_u );
+		current_u = n_u;
+		n_u =  n_u->next;
+	}
+	free( axel->url );
+	
+	
+	if_t *current_if = axel->conf->interfaces;
+	if_t *n_if = axel->conf->interfaces->next;
+	
+	while (  current_if != axel->conf->interfaces ) {
+		free( current_if );
+		current_if = n_if;
+		n_if = n_if->next;
+	}
+	free( axel->conf->interfaces );	
+	
+	free( axel->conn );
+	free( axel );
 }

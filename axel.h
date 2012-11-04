@@ -112,3 +112,4 @@ void axel_do( axel_t *axel );
 void axel_close( axel_t *axel );
 
 double gettime();
+void free_axel_t ( axel_t *axel );
