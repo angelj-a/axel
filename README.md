@@ -1,6 +1,6 @@
 Axel Home:
 
-    See http://axel.alioth.debian.org/ for latest information on axel
+    See [http://axel.alioth.debian.org/](http://axel.alioth.debian.org/) for latest information on axel
 
 
 Supported architectures
